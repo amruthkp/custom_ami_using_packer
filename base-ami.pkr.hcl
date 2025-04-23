@@ -44,7 +44,7 @@ source "amazon-ebs" "ubuntu" {
 source "amazon-ebs" "ssm-example" {
   ami_name             = "packer_AWS {{timestamp}}"
   instance_type        = "t2.micro"
-  region               = "us-east-1"
+  region               = "us-west-2"
   source_ami           = "ami-04181fdd41a180f25" # Replace with a valid AMI ID
   ssh_username         = "ubuntu"
   ssh_interface        = "session_manager"
