@@ -18,6 +18,7 @@ source "amazon-ebs" "amazon-linux" {
   ami_regions     = [
                       "us-west-2"
                     ]
+  associate_public_ip_address = true  
 }
 
 # what to install, configure and file to copy/execute
