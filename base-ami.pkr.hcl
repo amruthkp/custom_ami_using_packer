@@ -47,10 +47,10 @@ source "amazon-ebs" "ssm-example" {
   region               = "us-west-2"
   source_ami           = "ami-04181fdd41a180f25" # Replace with a valid AMI ID
   ssh_username         = "ubuntu"
-  ssh_interface        = "session_manager"
+  ssh_interface        = "public_ip"
   communicator         = "ssh"
   ssh_port             = 22
-  iam_instance_profile = "myinstanceprofile" # Ensure this exists in AWS
+  iam_instance_profile = "myinstanceprofile" 
 }
 
 build {
