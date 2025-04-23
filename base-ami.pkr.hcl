@@ -7,74 +7,42 @@ packer {
   }
 }
 
-variable "region" {
-  type    = string
-  default = "us-west-2"
+data "amazon-ami" "example" {
+  most_recent = true
+  owners      = ["099720109477"]
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  region = "us-west-2"
 }
 
-source "amazon-ebs" "ubuntu" {
-  region                      = var.region
-  instance_type               = "t2.micro"
-  ssh_username                = "ubuntu"
-  ssh_timeout                 = "10m"
-  ssh_handshake_attempts     = 60
-  communicator                = "ssh"
-  ami_name                    = "custom-ubuntu-docker-ssm-ami-{{timestamp}}"
-  ami_description             = "Ubuntu 22.04 AMI with Docker, AWS SSM Agent, and NGINX"
-  associate_public_ip_address = true
-
-  source_ami_filter {
-    filters = {
-      name                = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
-      root-device-type    = "ebs"
-      virtualization-type = "hvm"
-    }
-    owners      = ["099720109477"] # Canonical
-    most_recent = true
-  }
-
-  tags = {
-    "Name"        = "Docker-SSM-Base-AMI"
-    "BaseImage"   = "Ubuntu"
-    "Environment" = "Dev"
-    "CreatedBy"   = "GitHubActions"
-  }
+source "amazon-ebs" "ssm-example" {
+  ami_name             = "packer_AWS {{timestamp}}"
+  instance_type        = "t2.micro"
+  region               = "us-west-2"
+  source_ami           = data.amazon-ami.example.id
+  ssh_interface        = "session_manager"
+  communicator         = "none"
+  iam_instance_profile = "myinstanceprofile"
 }
 
 build {
-  sources = ["source.amazon-ebs.ubuntu"]
+  sources = ["source.amazon-ebs.ssm-example"]
 
   provisioner "shell" {
-    inline = [
-      "echo 'Waiting 30 seconds for system to settle...'",
-      "sleep 30",
-
-      "echo 'Updating system packages...'",
-      "sudo apt-get update && sudo apt-get upgrade -y",
-
-      "echo 'Installing Docker...'",
-      "sudo apt-get install -y ca-certificates curl gnupg lsb-release",
-      "sudo mkdir -p /etc/apt/keyrings",
-      "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
-      "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
-      "sudo apt-get update",
-      "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
-      "sudo usermod -aG docker ubuntu",
-      "sudo systemctl enable docker",
-      "sudo systemctl start docker",
-
-      "echo 'Installing AWS SSM Agent...'",
-      "curl -o ssm-agent.deb https://s3.amazonaws.com/amazon-ssm-${var.region}/latest/debian_amd64/amazon-ssm-agent.deb",
-      "sudo dpkg -i ssm-agent.deb",
-      "sudo systemctl enable amazon-ssm-agent",
-      "sudo systemctl start amazon-ssm-agent",
-
-      "echo 'Installing NGINX...'",
-      "sudo apt-get install -y nginx",
-      "sudo systemctl enable nginx",
-      "sudo systemctl start nginx",
-
-      "echo 'Base AMI provisioning complete!'"
-    ]
+    inline = ["echo Provisioning with SSM..."]
   }
 }
