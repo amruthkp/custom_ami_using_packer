@@ -13,12 +13,16 @@ variable "region" {
 }
 
 source "amazon-ebs" "ubuntu" {
-  region                  = var.region
-  instance_type           = "t2.micro"
-  ssh_username            = "ubuntu"
-  ami_name                = "custom-ubuntu-docker-ssm-ami-{{timestamp}}"
-  ami_description         = "Ubuntu 24.04 AMI with Docker, AWS SSM Agent, and NGINX"
+  region                      = var.region
+  instance_type               = "t2.micro"
+  ssh_username                = "ubuntu"
+  ssh_timeout                 = "10m"
+  ssh_handshake_attempts     = 60
+  communicator                = "ssh"
+  ami_name                    = "custom-ubuntu-docker-ssm-ami-{{timestamp}}"
+  ami_description             = "Ubuntu 22.04 AMI with Docker, AWS SSM Agent, and NGINX"
   associate_public_ip_address = true
+
   source_ami_filter {
     filters = {
       name                = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
@@ -28,6 +32,7 @@ source "amazon-ebs" "ubuntu" {
     owners      = ["099720109477"] # Canonical
     most_recent = true
   }
+
   tags = {
     "Name"        = "Docker-SSM-Base-AMI"
     "BaseImage"   = "Ubuntu"
@@ -41,6 +46,9 @@ build {
 
   provisioner "shell" {
     inline = [
+      "echo 'Waiting 30 seconds for system to settle...'",
+      "sleep 30",
+
       "echo 'Updating system packages...'",
       "sudo apt-get update && sudo apt-get upgrade -y",
 
@@ -56,7 +64,7 @@ build {
       "sudo systemctl start docker",
 
       "echo 'Installing AWS SSM Agent...'",
-      "curl -o ssm-agent.deb https://s3.amazonaws.com/amazon-ssm-us-east-1/latest/debian_amd64/amazon-ssm-agent.deb",
+      "curl -o ssm-agent.deb https://s3.amazonaws.com/amazon-ssm-${var.region}/latest/debian_amd64/amazon-ssm-agent.deb",
       "sudo dpkg -i ssm-agent.deb",
       "sudo systemctl enable amazon-ssm-agent",
       "sudo systemctl start amazon-ssm-agent",
