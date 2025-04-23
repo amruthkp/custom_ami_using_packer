@@ -18,10 +18,10 @@ source "amazon-ebs" "ubuntu" {
   ssh_username                = "ubuntu"
   ssh_timeout                 = "10m"
   ssh_handshake_attempts     = 60
-  communicator                = "ssh"
   ami_name                    = "custom-ubuntu-docker-ssm-ami-{{timestamp}}"
   ami_description             = "Ubuntu 22.04 AMI with Docker, AWS SSM Agent, and NGINX"
   associate_public_ip_address = true
+  communicator                = "ssh"
 
   source_ami_filter {
     filters = {
@@ -29,7 +29,7 @@ source "amazon-ebs" "ubuntu" {
       root-device-type    = "ebs"
       virtualization-type = "hvm"
     }
-    owners      = ["099720109477"] # Canonical
+    owners      = ["099720109477"]
     most_recent = true
   }
 
@@ -39,18 +39,6 @@ source "amazon-ebs" "ubuntu" {
     "Environment" = "Dev"
     "CreatedBy"   = "GitHubActions"
   }
-}
-
-source "amazon-ebs" "ssm-example" {
-  ami_name             = "packer_AWS {{timestamp}}"
-  instance_type        = "t2.micro"
-  region               = "us-west-2"
-  source_ami           = "ami-04181fdd41a180f25" # Replace with a valid AMI ID
-  ssh_username         = "ubuntu"
-  ssh_interface        = "public_ip"
-  communicator         = "ssh"
-  ssh_port             = 22
-  iam_instance_profile = "myinstanceprofile" 
 }
 
 build {
@@ -73,7 +61,7 @@ build {
       "sudo systemctl start docker",
 
       "echo 'Installing AWS SSM Agent...'",
-      "curl -o ssm-agent.deb https://s3.amazonaws.com/amazon-ssm-us-east-1/latest/debian_amd64/amazon-ssm-agent.deb",
+      "curl -o ssm-agent.deb https://s3.amazonaws.com/amazon-ssm-us-west-2/latest/debian_amd64/amazon-ssm-agent.deb",
       "sudo dpkg -i ssm-agent.deb",
       "sudo systemctl enable amazon-ssm-agent",
       "sudo systemctl start amazon-ssm-agent",
@@ -85,13 +73,5 @@ build {
 
       "echo 'Base AMI provisioning complete!'"
     ]
-  }
-}
-
-build {
-  sources = ["source.amazon-ebs.ssm-example"]
-
-  provisioner "shell" {
-    inline = ["echo Connected via SSM at '${build.User}@${build.Host}:${build.Port}'"]
   }
 }
